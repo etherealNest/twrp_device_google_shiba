@@ -142,6 +142,13 @@ ENABLE_VIRTUAL_AB := true
 
 
 
+
+# --- Testing thinks ----
+
+TW_SUPPORT_INPUT_AIDL_HAPTICS := true
+
+
+
 # PRODUCT_COPY_FILES += \
 #     $(DEVICE_PATH)/fox_mod_ui/advanced.xml:recovery/root/twres/pages/advanced.xml \
 #     $(DEVICE_PATH)/fox_mod_ui/install.xml:recovery/root/twres/pages/install.xml
