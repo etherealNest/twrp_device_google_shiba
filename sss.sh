@@ -1,5 +1,4 @@
-
-
+#!/bin/bash
 
 device="$1"
 need_repack="$2"
