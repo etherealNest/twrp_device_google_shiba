@@ -1,0 +1,74 @@
+ТЕКСТ СГЕНЕРИРОВАН ИИ, МНЕ ЛЕНЬ ЕГО ПИСАТЬ
+======================================================
+
+ЭТАП 1: ПОДГОТОВКА ОКРУЖЕНИЯ И КЛОНИРОВАНИЕ ИСХОДНИКОВ
+------------------------------------------------------
+Установка утилиты repo и подготовка рабочей директории:
+  > mkdir -p ~/bin
+  > curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+  > chmod a+x ~/bin/repo
+  > echo "$HOME/bin" >> $GITHUB_PATH
+
+Создание папки и запуск официального скрипта синхронизации OrangeFox:
+  > mkdir -p "$GITHUB_WORKSPACE/OF"
+  > cd "$GITHUB_WORKSPACE/OF"
+  > git clone https://gitlab.com/OrangeFox/sync.git sync --depth=1
+  > cd sync
+  > export LC_ALL=C
+  > ./orangefox_sync.sh --branch 14.1 --path "$GITHUB_WORKSPACE/OF/fox_14.1" --depth=1
+
+
+ЭТАП 2: РЕШЕНИЕ ЗАВИСИМОСТЕЙ AOSP 14
+------------------------------------------------------
+[1] Клонирование недостающей библиотеки:
+  > cd "$GITHUB_WORKSPACE/OF/fox_14.1"
+  > git clone https://android.googlesource.com/platform/external/gflags external/gflags
+  Для чего: Сборочная система Android 14 при включенных динамических разделах 
+  требует snapuserd_ramdisk. Модуль snapuserd зависит от libgflags, которая 
+  отсутствует в базовом манифесте OrangeFox.
+
+[2] Исправление флага компилятора в gflags:
+  Изменить в файле: external/gflags/Android.bp
+  Строку: -Wno-cast-function-type-mismatch
+  Заменить на: -Wno-cast-function-type-strict
+  Для чего: Версия компилятора Clang, поставляемая с данным деревом AOSP, 
+  не поддерживает флаг mismatch. Замена на strict устраняет ошибку 
+  "unknown warning option" и позволяет завершить компиляцию libgflags.
+
+
+ЭТАП 3: НАСТРОЙКА ДЕРЕВА УСТРОЙСТВА (BoardConfig.mk)
+------------------------------------------------------
+[1] Обход валидации плагинов Soong
+  + BUILD_BROKEN_PLUGIN_VALIDATION := soong-libaosprecovery_defaults soong-libguitwrp_defaults soong-libminuitwrp_defaults soong-vold_defaults
+  Для чего: В AOSP 14 строгая проверка плагинов прерывает сборку. Флаг 
+  переводит ошибку конфликтующих модулей TWRP в статус предупреждения.
+
+[2] Принудительное использование предсобранного ядра
+  + TARGET_FORCE_PREBUILT_KERNEL := true
+  + BOARD_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.lz4
+  + TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.lz4
+  Для чего: Запрещает сборочной системе искать исходники ядра или использовать 
+  GKI-заглушки. Явно указывает путь к готовому образу ядра Image.lz4.
+
+[3] Исправление 5-секундных зависаний при нажатиях
+  + TW_SUPPORT_INPUT_1_2_HAPTICS := false
+  + TW_NO_HAPTICS := true
+  Для чего: Отключает виброотклик (Haptics). На архитектуре Tensor старые 
+  вызовы вибрации блокировали главный поток UI на таймауте I/O из-за 
+  отсутствия системных HAL-сервисов. Без них отклик интерфейса мгновенный.
+
+[4] Передача управления экраном в GUI
+  - # TW_NO_SCREEN_BLANK := true
+  Для чего: Закомментировано. Жесткий запрет гашения экрана вызывал конфликты 
+  с таймаутами дисплея. Затуханием управляют настройки самого рекавери.
+
+
+ЭТАП 4: ЗАПУСК СБОРКИ
+------------------------------------------------------
+Экспорт базовых переменных и инициализация сборочного окружения в терминале:
+  > export ALLOW_MISSING_DEPENDENCIES=true
+  > export LC_ALL=C
+  > source build/envsetup.sh
+
+Запуск кастомного скрипта сборки устройства:
+  > ./device/google/shiba/sss.sh shiba

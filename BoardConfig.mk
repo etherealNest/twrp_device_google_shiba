@@ -177,8 +177,11 @@ BOARD_MKBOOTIMG_ARGS += --vendor_cmdline $(VENDOR_CMDLINE)
 # Эти настройки передаются команде mkbootimg через BOARD_MKBOOTIMG_ARGS. 
 # Их корректность критична для загрузки, но в общем случае их оставляют из оригинальной BoardConfig для устройства.
 
-# BOARD_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.lz4
-# TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.lz4
+# Принудительно юзаем предсобранное ядро
+TARGET_FORCE_PREBUILT_KERNEL := true
+
+BOARD_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.lz4
+TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.lz4
 BOARD_KERNEL_IMAGE_NAME := Image.lz4
 BOARD_PREBUILT_DTBIMAGE_DIR := $(DEVICE_PATH)/prebuilt/dtbs
 BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilt/dtbs/dtbo.img
@@ -291,8 +294,9 @@ TW_INCLUDE_LPTOOLS := true
 TW_INCLUDE_PYTHON := true
 # ключают различные утилиты (toolbox вместо ashutils, Python-скрипты, лёгкие инструменты для dumpstate и т.п.) в сборку рекавери.
 BOARD_VINTF_CHECK := false
-TW_NO_SCREEN_BLANK := true
+# TW_NO_SCREEN_BLANK := true
 # отключает автоматическое гашение экрана в рекавери (чтобы экран не темнел при бездействии).
+# Убрано из-за ненадобности
 
 # TWRP_EVENT_LOGGING := true
 # включает логгирование событий (сенсора, кнопок, тач-джеста) для отладки.
@@ -437,14 +441,9 @@ BOARD_DTBOIMG_PARTITION_SIZE := 4194304
 # Включает cpusets — механизм управления CPU ядрами (распределение процессов по кластерам).
 # Для оптимизации производительности recovery на многоядерных чипах.
 
+# Обход валидации плагинов Soong (иначе просто упадёт)
+BUILD_BROKEN_PLUGIN_VALIDATION := soong-libaosprecovery_defaults soong-libguitwrp_defaults soong-libminuitwrp_defaults soong-vold_defaults
 
-
-
-
-
-
-
-
-
-
-
+# Исправление 5-секундных зависаний при нажатиях отключением вибрации
+TW_SUPPORT_INPUT_1_2_HAPTICS := false
+TW_NO_HAPTICS := true
